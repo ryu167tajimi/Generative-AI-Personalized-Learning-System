@@ -1,7 +1,71 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RYUVAR｜生成AI教養 Ver.2.7.7</title><style>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RYUVAR｜生成AI教養 Ver.2.8.0</title><style>
 :root{font-family:system-ui,-apple-system,'Noto Sans JP',sans-serif;color:#18374b;background:#f0f6f9}*{box-sizing:border-box}body{margin:0}header{background:linear-gradient(110deg,#083f70,#078b9a);color:white;padding:23px 16px}main{max-width:760px;margin:auto;padding:14px}h1{font-size:1.35rem;margin:6px 0}h2{font-size:1.25rem;margin:0 0 12px}h3{font-size:1.05rem}.card{background:#fff;border-radius:18px;padding:22px;margin:12px 0;box-shadow:0 4px 18px #17445a12}.muted{color:#5a7280;font-size:.92rem;line-height:1.65}.center{text-align:center}.mascot{display:block;width:100%;max-width:430px;height:auto;object-fit:contain;margin:8px auto 16px}.btn{display:block;width:100%;border:0;border-radius:12px;background:#087d91;color:white;font-size:1rem;font-weight:750;min-height:50px;padding:12px;margin:10px 0;cursor:pointer}.btn:disabled{opacity:.42;cursor:not-allowed}.btn.secondary{background:#e7f2f6;color:#145269}.btn.outline{background:white;color:#145269;border:1px solid #8cb5c3}.row{display:flex;gap:10px}.row>*{flex:1}.choice{border:1px solid #b9d1da;border-radius:12px;padding:15px;display:flex;align-items:center;gap:10px;margin:9px 0;cursor:pointer;line-height:1.5}.choice:has(input:checked){background:#e3f7f9;border:2px solid #087d91;padding:14px}.choice input{width:20px;height:20px;accent-color:#087d91;flex:none}.field{margin:17px 0}.field label{display:block;font-weight:700;margin-bottom:7px}input[type=text],select,textarea{font:inherit;width:100%;padding:12px;border:1px solid #a9c3ce;border-radius:10px;background:white}textarea{min-height:230px;line-height:1.55}.pill{display:inline-block;border-radius:100px;background:#e1f3f6;color:#146274;padding:5px 12px;font-size:.82rem;font-weight:700}.progress{height:8px;background:#e5eef2;border-radius:10px;overflow:hidden;margin:12px 0}.bar{height:100%;background:#098e9b;transition:width .2s}.nav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}.nav button{border:1px solid #a8c7d0;background:white;color:#164c61;border-radius:10px;padding:10px 12px;min-height:44px;font-weight:700}.warn{background:#fff6e9;border-left:4px solid #df903b;padding:12px;border-radius:8px;line-height:1.6}.hidden{display:none!important}#status{min-height:1.4em;color:#076a59;font-weight:700}.two{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.mode{border:2px solid #c6dce4;border-radius:14px;padding:18px;cursor:pointer;text-align:left;background:#fff}.mode strong{display:block;font-size:1.15rem;margin:7px 0}.mode.active{border-color:#078a99;background:#e6f8fa}.small{font-size:.85rem}.result{background:#e9f7f6;border-radius:12px;padding:15px;line-height:1.65}@media(max-width:680px){.card{padding:17px}.two{grid-template-columns:1fr}header{padding:18px 14px}.row{gap:7px}}
-</style></head><body><header><div style="max-width:760px;margin:auto"><div class="small">🏛️ 多治見市職員向け・試行版</div><h1>RYUVAR｜生成AI教養</h1><div class="small">Ver.2.7.7｜簡易・標準・詳細診断｜業務別の個別教養</div></div></header><main><div class="card"><div class="nav"><button type="button" id="back">← ひとつ前</button><span id="step" class="muted"></span><button type="button" id="home">⌂ 最初へ</button></div><div id="content"></div></div><p id="status" aria-live="polite"></p><p class="muted center">氏名・傷病者情報・機密情報は入力しないでください。診断は端末内で処理します。</p></main><script>
+#soundToggle{border:1px solid #b4d6e0;background:#ffffff1c;color:white;border-radius:9px;padding:7px 11px;cursor:pointer;font-weight:700;font-size:.84rem;min-height:36px}#soundToggle:focus-visible{outline:3px solid #fff;outline-offset:2px}
+</style></head><body><header><div style="max-width:760px;margin:auto"><div class="small">🏛️ 多治見市職員向け・試行版</div><h1>RYUVAR｜生成AI教養</h1><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="small">Ver.2.8.0｜簡易・標準・詳細診断｜業務別の個別教養</div><button type="button" id="soundToggle" aria-pressed="true">🔊 操作音 ON</button></div></div></header><main><div class="card"><div class="nav"><button type="button" id="back">← ひとつ前</button><span id="step" class="muted"></span><button type="button" id="home">⌂ 最初へ</button></div><div id="content"></div></div><p id="status" aria-live="polite"></p><p class="muted center">氏名・傷病者情報・機密情報は入力しないでください。診断は端末内で処理します。</p></main><script>
 'use strict';
+// 操作音：Bタイプ・音量アップの2音クリック（音声ファイル不要・Web Audio API）
+// ブラウザの音量設定に従います。利用者がON/OFFを切り替えられます。
+let soundEnabled=true;
+try{soundEnabled=localStorage.getItem('ryuvar_click_sound')!=='off'}catch(e){}
+let clickAudioContext=null;
+const soundToggle=document.getElementById('soundToggle');
+function updateSoundToggle(){
+  soundToggle.textContent=soundEnabled?'🔊 操作音 ON':'🔇 操作音 OFF';
+  soundToggle.setAttribute('aria-pressed',String(soundEnabled));
+}
+function playClick(){
+  if(!soundEnabled)return;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    if(!clickAudioContext)clickAudioContext=new AC();
+    const ctx=clickAudioContext;
+    if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+    const t=ctx.currentTime+0.005;
+    // Bサンプル「ポロン♪」：523Hz → 784Hz、音量を上げた柔らかい2音。
+    // それぞれ独立した音量カーブで、音割れを抑えながら聞き取りやすくする。
+    const notes=[{hz:523,delay:0,duration:0.15},{hz:784,delay:0.065,duration:0.18}];
+    for(const note of notes){
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      const at=t+note.delay;
+      osc.type='sine';
+      osc.frequency.setValueAtTime(note.hz,at);
+      gain.gain.setValueAtTime(0.0001,at);
+      gain.gain.exponentialRampToValueAtTime(0.24,at+0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001,at+note.duration);
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.start(at);osc.stop(at+note.duration+0.015);
+    }
+  }catch(e){} // 音声非対応でも操作は妨げない
+}
+updateSoundToggle();
+soundToggle.addEventListener('click',()=>{
+  soundEnabled=!soundEnabled;
+  try{localStorage.setItem('ryuvar_click_sound',soundEnabled?'on':'off')}catch(e){}
+  updateSoundToggle();
+  if(soundEnabled)playClick();
+});
+// 動的に生成される選択肢・ボタンにも対応。
+document.addEventListener('pointerdown',event=>{
+  if(event.target.closest('#soundToggle'))return;
+  const el=event.target.closest('button,select,.choice,.mode,input[type="radio"],input[type="checkbox"]');
+  if(!el||el.disabled||el.matches('button:disabled'))return;
+  playClick();
+},{passive:true});
+document.addEventListener('keydown',event=>{
+  if(event.repeat||!['Enter',' '].includes(event.key))return;
+  const el=event.target;
+  if(el.closest('#soundToggle'))return;
+  if(el.matches('button,select,input[type="radio"],input[type="checkbox"]'))playClick();
+});
+document.addEventListener('change',event=>{
+  if(event.target.matches('select')&&event.detail===0){
+    // マウス操作はpointerdownで鳴るため、キーボード選択時のみ補完。
+    // changeのみの端末では音を鳴らす。
+  }
+});
+
 const KEY='ryuvar26_draft';
 const common=[
 {id:'use',q:'生成AIをどの程度使っていますか？',o:['ほとんど使ったことがない','時々、文章作成や調べ物に使う','日常的に業務で使っている','業務改善や仕組みづくりにも使う'],kind:'profile'},
@@ -63,7 +127,7 @@ $('learningNext').onclick=()=>{fields.forEach(f=>l[f.id]=$(f.id).value);if(field
 else if(state.page==='quiz'){const q=state.questions[state.qi];if(!q){state.page='result';render();return}const i=state.qi;el.innerHTML=`<span class="pill">${state.mode==='simple'?'簡易診断':state.mode==='standard'?'標準診断':'詳細診断'}</span><div class="progress"><div class="bar" style="width:${(i+1)/state.questions.length*100}%"></div></div><p class="muted">質問 ${i+1} / ${state.questions.length}</p><h2>${escapeHtml(q.q)}</h2><div id="options">${q.o.map((o,j)=>`<label class="choice"><input type="radio" name="answer" value="${j}" ${state.answers[q.id]===j?'checked':''}><span>${escapeHtml(o)}</span></label>`).join('')}</div><div class="row"><button class="btn secondary" id="qprev">← 前の質問</button><button class="btn" id="qnext" ${state.answers[q.id]===undefined?'disabled':''}>${i===state.questions.length-1?'診断結果を見る':'次の質問へ →'}</button></div>`;el.querySelectorAll('input[name="answer"]').forEach(input=>input.onchange=()=>selected(q.id,Number(input.value)));$('qprev').onclick=()=>{if(state.qi>0){state.qi--;save();render()}else go('learning')};$('qnext').onclick=()=>{if(state.answers[q.id]===undefined)return;if(state.qi<state.questions.length-1){state.qi++;save();render()}else go('result')};}
 else if(state.page==='result'){const qs=state.questions;const keyed=qs.filter(q=>Number.isInteger(q.correct));const correct=keyed.filter(q=>state.answers[q.id]===q.correct);const weak=keyed.filter(q=>state.answers[q.id]!==q.correct).map(q=>q.topic);const score=correct.length;const max=keyed.length;const use=state.answers.use??0;const level=score/max<.5?'初級':score/max<.82?'中級':use>=2?'上級候補':'中級';const weakness=[...new Set(weak)];const goal=common[4].o[state.answers.goal??0];state.result={score,max,level,weakness,goal};el.innerHTML=`<span class="pill">診断完了</span><h2>あなた専用の教養プラン</h2><div class="result"><strong>学習開始レベル：${level}</strong><p>知識確認：${score} / ${max}問</p><p>重点復習：${weakness.length?escapeHtml(weakness.join('・')):'基礎を確認しながら応用へ'}</p><p>学習希望：${escapeHtml(goal)}</p></div><p class="muted">レベルは今回の回答に基づく暫定判定です。詳細版を選んだこと自体では上級判定になりません。</p><h3>ChatGPTへ移行する専用プロンプト</h3><textarea id="prompt" readonly></textarea><button class="btn" id="copy">📋 プロンプトをコピー</button><button class="btn secondary" id="openChat">ChatGPTを開く（コピー後）</button><button class="btn outline" id="again">診断を最初からやり直す</button><p class="muted">コピーした文章をChatGPTの新しいチャットに貼り付けて送信してください。移行後は同じチャットで「次へ」と入力すると第2回以降へ進めます。</p>`;$('prompt').value=makePrompt();$('copy').onclick=async()=>{const txt=$('prompt').value;try{await navigator.clipboard.writeText(txt);$('status').textContent='コピーしました。ChatGPTに貼り付けてください。'}catch(e){$('prompt').focus();$('prompt').select();try{document.execCommand('copy');$('status').textContent='コピー操作を実行しました。貼り付けて確認してください。'}catch(e2){$('status').textContent='文章を長押しして選択・コピーしてください。'}}};$('openChat').onclick=()=>window.open('https://chatgpt.com/','_blank','noopener,noreferrer');$('again').onclick=reset;}
 }
-function makePrompt(){const p=state.profile,r=state.result,l=state.learning;return `【RYUVAR｜多治見市職員向け生成AI教養・個別開始プロンプト Ver.2.7.7】
+function makePrompt(){const p=state.profile,r=state.result,l=state.learning;return `【RYUVAR｜多治見市職員向け生成AI教養・個別開始プロンプト Ver.2.8.0】
 あなたは自治体職員向け生成AI教養の講師です。以下の診断情報に基づき、まず第1回の教養を直ちに開始してください。
 
 ■受講者プロフィール（自己申告・診断結果）
