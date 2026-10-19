@@ -97,7 +97,7 @@ function getDomain(){
  // 実際の担当業務を最優先。部署名だけで救急問題にしない。
  const rules=[
  ['window',/窓口|住民対応|市民対応|受付|申請|証明書|戸籍|住民票|相談窓口/],
- ['fire_prevention',/消防予防|防火|立入検査|査察|危険物|消防用設備|予防業務/],
+ ['fire_prevention',/消防予防|予防|防火|立入検査|査察|危険物|消防用設備/],
  ['fire_ems',/救急|救命|救急活動/],
  ['fire_response',/警防|火災|消火|救助|災害対応|消防訓練/],
  ['education',/教育|学校|授業|教員|保育|幼稚園|児童|生徒/],
@@ -113,9 +113,49 @@ function getDomain(){
  if(/消防/.test(org))return 'fire_admin';
  return 'general';
 }
+// 業務の実際の場面を使った「生成AIの使い方」診断。法令・活動判断の正誤テストではない。
+const tailoredCases={
+ fire_prevention:[
+  {q:'【消防予防】立入検査の指摘事項をAIで説明文に整理する場合、最も適切なのは？',o:['事業所名・担当者名・未公開の検査記録をそのまま入力する','個人や事業所を特定できない架空事例で説明文の案を作り、法令・市の運用を確認する','AIの判断だけで違反を確定する','AIが示した条文番号を確認せず通知する'],correct:1,topic:'予防業務・安全なAI活用'},
+  {q:'【消防予防】AIが「この建物には防火管理者の選任義務がある」と回答しました。適切な対応は？',o:['AIの回答だけで義務を断定する','他のAIが同じ回答なら確定する','建物の用途・収容人員など必要な条件を確認し、現行法令と運用に照らして判断する','根拠が不明でも事業所に指導する'],correct:2,topic:'予防業務・根拠確認'}
+ ],
+ fire_ems:[
+  {q:'【救急】救急活動報告書の文章をAIで読みやすくする際、適切なのは？',o:['実際の傷病者の氏名や詳細な記録を外部AIに貼る','架空の事例を使って文章構成を学び、実記録は所属の規程に従って扱う','AIが推測した観察結果を追記する','AIの文章なら隊員による確認を省く'],correct:1,topic:'救急業務・情報保護'},
+  {q:'【救急】AIが救急活動の処置を提案した場合、適切なのは？',o:['AIの提案を活動プロトコールより優先する','回答が速ければそのまま採用する','AIを補助的な学習に限り、実際の判断は現行プロトコールと指示体制に従う','AIに最終判断を任せる'],correct:2,topic:'救急業務・判断の限界'}
+ ],
+ fire_response:[
+  {q:'【警防】訓練計画案をAIで作成する際、適切なのは？',o:['訓練目的・対象・使用資機材・安全条件を指定し、職員が内容を確認する','AIが作った計画は安全確認不要とする','実際の災害指令情報を無条件で入力する','訓練の危険性はAIに一任する'],correct:0,topic:'警防業務・訓練計画'},
+  {q:'【警防】AIが資機材の点検手順を提案した場合、適切なのは？',o:['提案だけを正式手順として採用する','メーカーの取扱説明書や所属の点検基準と照合する','点検記録を省略する','AIが詳しければ安全確認は不要'],correct:1,topic:'警防業務・手順確認'}
+ ],
+ window:[
+  {q:'【窓口】住民向けの申請案内をAIで作成する際、適切なのは？',o:['住民の申請書をそのまま入力する','架空の相談例で分かりやすい案内案を作り、現行の申請条件を確認する','AIの回答だけで受付要件を決める','案内に記載した期限は確認しない'],correct:1,topic:'窓口業務・制度案内'},
+  {q:'【窓口】AIが申請に必要な書類を列挙しました。適切なのは？',o:['AIが列挙したものを必須書類として確定する','案内文が丁寧なら確認しない','市の最新の手続き案内や担当部署の基準と照合する','AIの回答をそのまま住民に配布する'],correct:2,topic:'窓口業務・制度確認'}
+ ],
+ tax:[
+  {q:'【税務】AIに市税の説明文を作成させる際、適切なのは？',o:['個人の課税情報を入力する','架空の例で説明文を作り、現行法令・条例・市の案内を確認する','AIが示した税率を確認せず採用する','納税額をAIの推測だけで決定する'],correct:1,topic:'税務・根拠確認'},
+  {q:'【税務】AIが納付期限を回答した場合、適切なのは？',o:['年度や税目を確認せず採用する','複数回同じ回答なら確定する','対象年度・税目を確認し、市の正式な通知や公表資料と照合する','AIの回答を正式通知として扱う'],correct:2,topic:'税務・期限確認'}
+ ],
+ welfare:[
+  {q:'【福祉】相談支援の説明文をAIで作る際、適切なのは？',o:['相談者の病歴・氏名をそのまま入力する','架空事例で説明案を作り、制度要件や窓口を担当者が確認する','AIに支援の可否を最終決定させる','制度の対象条件を確認しない'],correct:1,topic:'福祉・情報保護'},
+  {q:'【福祉】AIが利用できる支援制度を挙げた場合、適切なのは？',o:['本人の状況や制度の要件を確認せず案内する','AIの提案だけで利用資格を確定する','最新の制度・対象要件を公式資料で確認する','存在しない制度でも例として案内する'],correct:2,topic:'福祉・制度確認'}
+ ],
+ education:[
+  {q:'【教育】AIで教材案を作成する際、適切なのは？',o:['児童生徒の氏名と成績をそのまま入力する','学年・学習目標・授業時間を指定し、教員が内容を確認する','AIに児童生徒の評価をすべて任せる','誤りがあってもそのまま配布する'],correct:1,topic:'教育・教材作成'},
+  {q:'【教育】AIが学習内容を説明した場合、適切なのは？',o:['説明が分かりやすければ正確とみなす','AIの回答を教科書より優先する','学習指導要領や使用教材などに照らして内容を確認する','根拠確認は不要とする'],correct:2,topic:'教育・教材確認'}
+ ],
+ construction:[
+  {q:'【建設】道路工事のお知らせをAIで作る際、適切なのは？',o:['未公開の用地交渉情報をそのまま入力する','公開可能な条件を指定して文案を作り、工期・交通規制を担当者が確認する','AIに工事日程を推測させて確定する','安全情報は省略する'],correct:1,topic:'建設・周知文書'},
+  {q:'【建設】AIが施設点検の方法を提案した場合、適切なのは？',o:['現場確認なしにそのまま採用する','提案が詳しければ安全措置を省略する','施設の状況・点検基準・安全手順を確認してから検討する','専門資格が必要な作業もAIの指示だけで行う'],correct:2,topic:'建設・安全確認'}
+ ],
+ fire_admin:[
+  {q:'【消防庶務】職員向け通知文をAIで作る際、適切なのは？',o:['職員の個人情報を無条件で入力する','目的・対象・期限を指定し、庁内規程と内容を確認する','AIに決裁を任せる','確認せず全職員に送る'],correct:1,topic:'消防庶務・通知文'},
+  {q:'【消防庶務】AIが予算資料の数字をまとめた場合、適切なのは？',o:['数字が整っていれば正しいとみなす','AIの集計を根拠資料なしで確定する','元資料と計算結果を照合し、必要な決裁を受ける','過年度の数字はすべて無視する'],correct:2,topic:'消防庶務・数値確認'}
+ ]
+};
 function makeDomainQuestions(){
  const key=getDomain(),d=domainCases[key];
  const scenario=d.document,recipient=d.recipient,source=d.source,data=d.data;
+ const tailored=tailoredCases[key]||[];
  return [
  {id:'job1_'+key,q:`${scenario}を生成AIで作るとき、最も適切な指示は？`,o:[`対象を${recipient}とし、目的・必要事項・文章の長さを指定する`,'「いい感じに書いて」とだけ入力する','実在する個人情報をすべて入力する','生成結果は確認不要と指定する'],correct:0,topic:'指示の基本'},
  {id:'job2_'+key,q:`生成AIが作成した${scenario}を使用する前に、最も重要なのは？`,o:['文章が丁寧ならそのまま使う',`${source}と照合し、必要な確認・承認を受ける`,'AIが自信ありと答えれば確認不要','同じ質問を2回すれば必ず正しい'],correct:1,topic:'回答の検証'},
@@ -123,7 +163,7 @@ function makeDomainQuestions(){
  {id:'job4_'+key,q:`${scenario}のAI案が${recipient}にとって分かりにくい場合、どう改善しますか？`,o:['最初の回答をそのまま使う','AIが作ったので変更できない',`対象を${recipient}と明示し、難しい言葉の言い換えや構成を指定して再作成する`,'内容の正確さより見た目だけを優先する'],correct:2,topic:'指示の改善'},
  {id:'job5_'+key,q:`${scenario}にAIが具体的な数値や期限を記載した場合、適切な対応は？`,o:['具体的なので確認しない',`根拠資料や${source}で数値・期限を確認する`,'別のAIが同じ回答なら確定する','数字をすべて削除すれば確認不要'],correct:1,topic:'回答の検証'},
  {id:'job6_'+key,q:`${scenario}の作成に生成AIを導入するか検討するとき、最初に整理すべきことは？`,o:['必ず生成AIを導入すると決める','確認作業をすべて省略する','導入前の業務を調べずに公開する','目的・対象業務・情報の取扱い・効果・リスクを比較する'],correct:3,topic:'業務改善'}
- ];
+ ].map((q,i)=>i<tailored.length?{...tailored[i],id:'job'+(i+1)+'_'+key}:q);
 }
 const state={page:'welcome',history:[],mode:'standard',profile:{dept:'',division:'',section:'',role:'',task:'',experience:'',purpose:''},learning:{minutes:'',period:'',frequency:'',target:''},answers:{},qi:0,questions:[],result:null};
 const $=id=>document.getElementById(id);const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -169,7 +209,7 @@ $('learningNext').onclick=()=>{fields.forEach(f=>l[f.id]=$(f.id).value);if(field
 else if(state.page==='quiz'){const q=state.questions[state.qi];if(!q){state.page='result';render();return}const i=state.qi;el.innerHTML=`<span class="pill">${state.mode==='simple'?'簡易診断':state.mode==='standard'?'標準診断':'詳細診断'}</span><div class="progress"><div class="bar" style="width:${(i+1)/state.questions.length*100}%"></div></div><p class="muted">質問 ${i+1} / ${state.questions.length}</p><h2>${escapeHtml(q.q)}</h2><div id="options">${q.o.map((o,j)=>`<label class="choice"><input type="radio" name="answer" value="${j}" ${state.answers[q.id]===j?'checked':''}><span>${escapeHtml(o)}</span></label>`).join('')}</div><div class="row"><button class="btn secondary" id="qprev">← 前の質問</button><button class="btn" id="qnext" ${state.answers[q.id]===undefined?'disabled':''}>${i===state.questions.length-1?'診断結果を見る':'次の質問へ →'}</button></div>`;el.querySelectorAll('input[name="answer"]').forEach(input=>input.onchange=()=>selected(q.id,Number(input.value)));$('qprev').onclick=()=>{if(state.qi>0){state.qi--;save();render()}else go('learning')};$('qnext').onclick=()=>{if(state.answers[q.id]===undefined)return;if(state.qi<state.questions.length-1){state.qi++;save();render()}else go('result')};}
 else if(state.page==='result'){const qs=state.questions;const keyed=qs.filter(q=>Number.isInteger(q.correct));const correct=keyed.filter(q=>state.answers[q.id]===q.correct);const weak=keyed.filter(q=>state.answers[q.id]!==q.correct).map(q=>q.topic);const score=correct.length;const max=keyed.length;const use=state.answers.use??0;const level=score/max<.5?'初級':score/max<.82?'中級':use>=2?'上級候補':'中級';const weakness=[...new Set(weak)];const goal=common[4].o[state.answers.goal??0];state.result={score,max,level,weakness,goal};el.innerHTML=`<span class="pill">診断完了</span><h2>あなた専用の教養プラン</h2><div class="result"><strong>学習開始レベル：${level}</strong><p>知識確認：${score} / ${max}問</p><p>重点復習：${weakness.length?escapeHtml(weakness.join('・')):'基礎を確認しながら応用へ'}</p><p>学習希望：${escapeHtml(goal)}</p></div><p class="muted">レベルは今回の回答に基づく暫定判定です。詳細版を選んだこと自体では上級判定になりません。</p><h3>ChatGPTへ移行する専用プロンプト</h3><textarea id="prompt" readonly></textarea><button class="btn" id="copy">📋 プロンプトをコピー</button><button class="btn secondary" id="openChat">ChatGPTを開く（コピー後）</button><button class="btn outline" id="again">診断を最初からやり直す</button><p class="muted">コピーした文章をChatGPTの新しいチャットに貼り付けて送信してください。移行後は同じチャットで「次へ」と入力すると第2回以降へ進めます。</p>`;$('prompt').value=makePrompt();$('copy').onclick=async()=>{const txt=$('prompt').value;try{await navigator.clipboard.writeText(txt);$('status').textContent='コピーしました。ChatGPTに貼り付けてください。'}catch(e){$('prompt').focus();$('prompt').select();try{document.execCommand('copy');$('status').textContent='コピー操作を実行しました。貼り付けて確認してください。'}catch(e2){$('status').textContent='文章を長押しして選択・コピーしてください。'}}};$('openChat').onclick=()=>window.open('https://chatgpt.com/','_blank','noopener,noreferrer');$('again').onclick=reset;}
 }
-function makePrompt(){const p=state.profile,r=state.result,l=state.learning;return `【RYUVAR｜多治見市職員向け生成AI教養・個別開始プロンプト Ver.2.8.2】
+function makePrompt(){const p=state.profile,r=state.result,l=state.learning;return `【RYUVAR｜多治見市職員向け生成AI教養・個別開始プロンプト Ver.2.8.5】
 あなたは自治体職員向け生成AI教養の講師です。以下の診断情報に基づき、まず第1回の教養を直ちに開始してください。
 
 ■受講者プロフィール（自己申告・診断結果）
@@ -210,6 +250,12 @@ ChatGPTの画面で利用可能なカード・表・見出し・色分け表現�
 【イラスト・図解の表示／画像の見切れ防止】
 各回の教材テーマと所属・担当業務に合う小さな視覚要素を、②解説・③職場の具体例・④誤解と正しい理解など本文中の適切な位置に2〜4か所分散する。文章より巨大な画像を優先しない。冒頭に横幅いっぱいの大きなヒーロー画像・縦長の巨大画像を挿入しない。画像を表示する場合は、全体が見える縦横比（原則1:1または4:3、必要なら16:9）と控えめな表示サイズを選び、画像の端・人物・文字・重要な説明が切れないようにする。トリミング（cover）より全体表示（contain）を優先し、表示が切れる可能性のあるレイアウトや長い画像内テキストを避ける。画像内に重要な文章を埋め込まず、説明は画像の外のテキストで書く。ChatGPTの画面側で画像サイズ・トリミングを厳密に制御できない場合は、無理に画像を出さず、絵文字・色付き見出し・小さな図解・比較表を使う。実在の患者・住民・職員を特定できる描写を避ける。画像生成や外部画像の表示は環境依存であり、表示できない場合に表示済みと主張しない。ユーザーが教養本文を読む妨げになる過大な画像は使用しない。
 
+【受講者プロフィール連動・視覚教材の強化 Ver.2.8.5】
+各回の教養を作成する際は、受講者プロフィールの「所属分野→部・局・署→課・室・係→担当業務」と、今回の学習テーマ、習熟度を照合してから、具体例と視覚教材を選定する。最優先は実際の担当業務であり、所属名だけを根拠に無関係な業務の画像を表示しない。例えば窓口担当に救急車や救急活動の画像を出さず、救急担当に窓口手続きの画像を出さない。ただし今回の学習内容に直接必要な比較例は例外とする。
+毎回、学習内容の理解に役立つイラスト・小図解・比較表などの視覚教材を原則2〜4か所、②分かりやすい解説と③担当業務での具体例を中心に配置する。少なくとも1か所は受講者の担当業務に直接関係する場面とする。単に業務の象徴（消防車、庁舎、AIロボットなど）を飾るのではなく、今回学ぶ操作・判断・手順・誤解を視覚的に説明する。各視覚教材に短い説明文を付け、同じ画像や類似した画像を繰り返さない。
+画像の表示・生成が利用可能なら小〜中サイズの正方形または4:3の画像を優先し、重要部分の見切れや文字つぶれを避ける。画像を実際に表示できない環境では、表示したふりや「画像はこちら」といった架空のリンクを出さず、Markdownの表、短い手順図、絵文字などで代替する。画像の表示可否の確認や追加の操作を受講者に要求せず、教養を止めない。
+「図で説明して」「イラストを増やして」「もっと簡単に」「この内容を詳しく」などの受講者の会話には、その回の内容と担当業務に即した補足説明・追加図解で応じる。補足教養後は、元の学習進捗を保持し、「次へ」で次回へ進める。
+
 【間違いやすいポイントの作成ルール】
 ④は必ず当該回の②で実際に教えた内容に限定し、②で説明していない新しい知識や一般的な注意事項を持ち込まない。単なる注意喚起ではなく、学んだことを誤って理解・適用するとどうなるかを具体例で対比する。初級では短く平易に、上級では判断の境界条件も示す。例：第1回で「AIは誤る」を学んだ場合「AIが断言した→正確だと思い込み消防関係法令の誤った条文を通知文に記載→公式法令で確認する」と説明する。別の回ではその回に学んだ内容に合わせて必ず新しい例を作り、同じ例の使い回しを避ける。
 【課・係・担当業務に合うイラストの優先ルール】
@@ -229,7 +275,7 @@ ChatGPTの画面で利用可能なカード・表・見出し・色分け表現�
 架空の事例と公開可能な情報のみを教材に使用する。氏名・傷病者情報・住民情報・機密情報の入力を求めない。所属組織の情報セキュリティ規程・生成AI利用方針を優先する。生成AIの誤回答・古い法令・誤った数値に注意し、原典・公式資料で確認することを教える。救急・消防の活動判断をAIに任せない。
 
 ■継続運用
-第1回終了時に第2回のテーマを予告する。最後には「次へ」と入力すれば次の教養に進めることを短く案内するが、返答・確認は求めない。受講者が「次へ」と送信したら同じチャット内で第N+1回を同じ5項目形式で開始する。「復習」なら直前の内容をより分かりやすく説明する。既習内容の無用な繰り返しを避け、前回の内容・質問・理解状況を考慮して次回を調整する。新しいチャットでは継続情報が自動で引き継がれると仮定しない。必要なら受講者がコピーできる短い学習引継ぎメモを作成する。
+第1回終了時に第2回のテーマを予告する。最後には「次へ」と入力すれば次の教養に進めることを短く案内するが、返答・確認は求めない。受講者が「次へ」と送信したら同じチャット内で第N+1回を同じ5項目形式で開始する。「復習」なら直前の内容をより分かりやすく説明する。受講者は自分の都合のよい時刻に各回を開始し、途中で終了・中断してよい。受講者が「今日はここまで」「一旦終了」「中断」と伝えた場合はその時点で教養を止め、再開時に続きから学べるよう進捗と再開方法を短く案内する。受講者が「難しい」「もっと簡単に」「今回の内容をもう少し詳しく」「具体例を増やして」「別の例で説明して」などと話しかけた場合は、現在の回を進めず、同じ学習テーマの補足教養・追加解説・例示を対話形式で行う。理解できた後に「次へ」で次回に進む。追加解説は設定した学習時間を超えても受講者の希望を優先し、強制的に進行しない。既習内容の無用な繰り返しを避け、前回の内容・質問・理解状況を考慮して次回を調整する。新しいチャットでは継続情報が自動で引き継がれると仮定しない。必要なら受講者がコピーできる短い学習引継ぎメモを作成する。
 
 以上に従い、第1回の教養を開始してください。`;}
 $('back').onclick=()=>{if(state.page==='quiz'){if(state.qi>0){state.qi--;save();render()}else go('profile')}else if(state.history.length){state.page=state.history.pop();save();render()}else{const prev={mode:'welcome',profile:'mode',learning:'profile',result:'quiz'};state.page=prev[state.page]||'welcome';save();render()}window.scrollTo(0,0)};$('home').onclick=reset;restore();render();
